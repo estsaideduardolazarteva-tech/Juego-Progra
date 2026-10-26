@@ -43,6 +43,12 @@ public class Jugador : MonoBehaviour
         rb = GetComponent<Rigidbody2D>();
         col = GetComponent<BoxCollider2D>();
         sr.sprite = parado;
+
+        if (PlayerPrefs.GetInt("marraqueta_gratis", 0) == 1)
+        {
+            velocidad = 10f; // Sube la velocidad normal (que era 6.5f) a 10f para ir super rápido
+            Debug.Log("¡Efecto Marraqueta Activado! Velocidad aumentada.");
+        }
     }
 
     void Update()
