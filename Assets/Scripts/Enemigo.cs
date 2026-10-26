@@ -47,6 +47,11 @@ public class Enemigo : MonoBehaviour
         }
         else if (Nivel1.Instancia != null)
         {
+            AudioClip clipGolpe = Resources.Load<AudioClip>("Audio/golpe"); // Asegúrate de tener tu audio en Resources/Audio con este nombre
+            if (clipGolpe != null)
+            {
+                AudioSource.PlayClipAtPoint(clipGolpe, transform.position, 0.8f);
+            }
             Nivel1.Instancia.RecibirDanio(transform.position.x);
         }
     }

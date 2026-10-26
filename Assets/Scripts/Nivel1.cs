@@ -179,7 +179,10 @@ public class Nivel1 : MonoBehaviour
 
         jugador = g.AddComponent<Jugador>();
         jugador.Iniciar(idle, p1, p2);
+      //  g.AddComponent<Habilidades>();
     }
+
+
 
     void CrearCamara()
     {
@@ -196,6 +199,19 @@ public class Nivel1 : MonoBehaviour
         cam.orthographicSize = 5f;
         cam.clearFlags = CameraClearFlags.SolidColor;
         cam.backgroundColor = UIKit.Hex("3B8FE0");
+
+        var fuenteAudio = cam.gameObject.GetComponent<AudioSource>();
+        if (fuenteAudio == null) fuenteAudio = cam.gameObject.AddComponent<AudioSource>();
+
+        // Ponemos "Audio/" antes porque está metido dentro de la subcarpeta Audio en Resources
+        AudioClip clipMusica = Resources.Load<AudioClip>("Audio/thatlofishow-pixel-escape-pi");
+        if (clipMusica != null)
+        {
+            fuenteAudio.clip = clipMusica;
+            fuenteAudio.loop = true; // Se repite en bucle infinitamente
+            fuenteAudio.volume = 0.5f; // Volumen al 50% (cámbialo si lo quieres más fuerte o despacio)
+            fuenteAudio.Play();
+        }
 
         var sigue = cam.GetComponent<CamaraSigue>();
         if (sigue == null) sigue = cam.gameObject.AddComponent<CamaraSigue>();
@@ -355,10 +371,17 @@ public class Nivel1 : MonoBehaviour
     void Perder(string texto)
     {
         if (estado != Estado.Jugando) return;
+
         estado = Estado.Perdido;
         mensaje = texto + "\nReiniciando...";
         tFin = 2.5f;
         jugador.Congelar();
+        AudioClip clipPerderVida = Resources.Load<AudioClip>("Audio/perder"); // Asegúrate de tener tu archivo "perder" en Resources/Audio
+        if (clipPerderVida != null)
+        {
+            AudioSource.PlayClipAtPoint(clipPerderVida, Camera.main.transform.position, 0.8f);
+        }
+
     }
 
     // ================= TEXTOS EN PANTALLA =================

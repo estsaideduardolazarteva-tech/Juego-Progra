@@ -72,6 +72,11 @@ public class Jugador : MonoBehaviour
             v.y = fuerzaSalto;
             saltoBuffer = 0f;
             coyote = 0f;
+            AudioClip clipSalto = Resources.Load<AudioClip>("Audio/salto"); // Asegúrate de que tu archivo de audio en la carpeta Resources/Audio se llame "salto"
+            if (clipSalto != null)
+            {
+                AudioSource.PlayClipAtPoint(clipSalto, transform.position, 0.7f);
+            }
         }
         if (Entrada.SaltoSoltado() && v.y > 0f) v.y *= 0.5f; // salto corto si sueltas rapido
         Vel = v;
