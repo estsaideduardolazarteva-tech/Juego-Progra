@@ -129,10 +129,13 @@ public class Nivel1 : MonoBehaviour
 
     void CrearEnemigos()
     {
-        NuevoEnemigo(16f, 21f);
-        NuevoEnemigo(31f, 41f);
-        NuevoEnemigo(68f, 74f);
-        NuevoEnemigo(93f, 101f);
+        // El primero y el segundo usan el sprite 3 (índice 2)
+        NuevoEnemigo(16f, 21f, 2);
+        NuevoEnemigo(31f, 41f, 3);
+
+        // El tercero y el cuarto usan el sprite 11 (índice 10)
+        NuevoEnemigo(68f, 74f, 10);
+        NuevoEnemigo(93f, 101f, 11);
     }
 
     void CrearMeta()
@@ -294,19 +297,29 @@ public class Nivel1 : MonoBehaviour
             Moneda(Mathf.Lerp(x0, x1, cantidad == 1 ? 0f : i / (float)(cantidad - 1)), altura);
     }
 
-    void NuevoEnemigo(float izq, float der)
+    void NuevoEnemigo(float izq, float der, int indiceSprite)
     {
-        var g = Bloque("Enemigo", new Vector2(izq, SueloY + 0.45f), new Vector2(1.1f, 0.9f), UIKit.Hex("C0392B"), 5, true);
+        var g = new GameObject("Enemigo_Paceño");
+        g.transform.SetParent(transform);
+        g.transform.position = new Vector2(izq, SueloY + 0.45f);
+
+        var sr = g.AddComponent<SpriteRenderer>();
+        Sprite[] todosLosSprites = Resources.LoadAll<Sprite>("Sprites/Obstaculos");
+
+        if (todosLosSprites != null && todosLosSprites.Length > indiceSprite)
+        {
+            sr.sprite = todosLosSprites[indiceSprite];
+        }
+        sr.sortingOrder = 5;
+
+        var bc = g.AddComponent<BoxCollider2D>();
+        bc.size = new Vector2(1.1f, 0.9f);
+
         var rb = g.AddComponent<Rigidbody2D>();
         rb.bodyType = RigidbodyType2D.Kinematic;
         var e = g.AddComponent<Enemigo>();
         e.izquierda = izq;
         e.derecha = der;
-        // ojitos
-        var ojo1 = Bloque("Ojo", new Vector2(izq - 0.2f, SueloY + 0.6f), new Vector2(0.22f, 0.22f), Color.white, 6, false);
-        var ojo2 = Bloque("Ojo", new Vector2(izq + 0.2f, SueloY + 0.6f), new Vector2(0.22f, 0.22f), Color.white, 6, false);
-        ojo1.transform.SetParent(g.transform, true);
-        ojo2.transform.SetParent(g.transform, true);
     }
 
     // ================= REGLAS DEL JUEGO =================
