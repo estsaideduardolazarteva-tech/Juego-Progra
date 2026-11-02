@@ -357,8 +357,15 @@ public class Nivel1 : MonoBehaviour
         jugador.Empujar(dir);
     }
 
-    public void SumarMoneda() { monedas++; }
-
+    public void SumarMoneda()
+    {
+        monedas++;
+        AudioClip clipMoneda = Resources.Load<AudioClip>("Audio/monedas");
+        if (clipMoneda != null)
+        {
+            AudioSource.PlayClipAtPoint(clipMoneda, Camera.main.transform.position, 0.8f);
+        }
+    }
     public void LlegarAMeta()
     {
         if (estado != Estado.Jugando) return;
