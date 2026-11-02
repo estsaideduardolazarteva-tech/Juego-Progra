@@ -1,144 +1,221 @@
 using UnityEngine;
+using UnityEngine.UI;
+using TMPro;
+using System.Collections;
+using System.Collections.Generic;
 
-// MINIJUEGO DE TRIVIA PACEÑA PARA GANAR MONEDAS EXTRAS
 public class Marraqueta : MonoBehaviour
 {
-    bool abierto;
-    string intento = "";
-    string mensaje = "";
-    int indiceActual = 0;
+    public static Marraqueta Instancia;
 
-    GUIStyle estiloTexto;
-    GUIStyle estiloBoton;
-    GUIStyle estiloInput;
+    [Header("Referencias de UI del Panel")]
+    public GameObject panelTrivia;
+    public TextMeshProUGUI textoPregunta;
+    public Button[] botonesOpciones;
+    public TextMeshProUGUI textoFeedback;
+    public RectTransform minibusIcono; // El icono del minibús
 
-    // 10 preguntas y respuestas sobre La Paz
-    string[] pistas = {
-        "Pista: El pan crujiente y tradicional de La Paz",
-        "Pista: El famoso sistema de transporte por cable en el cielo",
-        "Pista: El mercado tradicional conocido por vender amuletos y ekikos",
-        "Pista: La plaza principal ubicada en el kilómetro cero de la ciudad",
-        "Pista: El imponente nevado blanco que cuida y vigila La Paz",
-        "Pista: La calle colonial y empedrada más famosa del centro",
-        "Pista: El bus municipal de transporte masivo de la ciudad",
-        "Pista: El plato típico paceño con choclo, queso y habas cocidas",
-        "Pista: El estadio de fútbol oficial ubicado en la zona de Miraflores",
-        "Pista: El mirador turístico con una vista hermosa de la hoyada"
+    [Header("Posiciones de la Ruta (Eje X en la barra)")]
+    public float[] posicionesParadasX; // Arrastra o define aquí las posiciones (ej: -100, 0, 100)
+
+    [Header("Configuración de Límite")]
+    public int limiteUsosPorNivel = 2; // Máximo 2 trivias por nivel
+    private int triviasJugadas = 0;
+
+    private bool abierto;
+    private int preguntaActualIndex = 0;
+    private int puntosGanados = 0;
+    private const int totalParadasPorRuta = 3; // Mantenemos exactamente 3 preguntas por cada viaje
+
+    // 🚎 BANCO AMPLIADO DE PREGUNTAS PACEÑAS
+    private string[] bancoPreguntas = {
+        "¿Qué gritas cuando el minibús va lleno y quieres bajar a media cuadra?",
+        "¿Cuál es la ley climática inquebrantable a las 2 de la tarde en La Paz?",
+        "¿Con qué se acompaña tradicionalmente un buen api con pastel en la mañana?",
+        "¿Cómo se llama el pan redondo y crujiente tradicional de la hoyada?",
+        "¿Qué famoso mercado tradicional es conocido por vender amuletos y ekekos?",
+        "¿Cuál es el nombre de la imponente montaña blanca que vigila la ciudad?",
+        "¿Cómo se llama el bus municipal de transporte masivo de la ciudad?",
+        "¿Cuál es el mirador turístico famoso por sus coloridos techos y vista panorámica?"
     };
 
-    string[] respuestas = {
-        "MARRAQUETA", "TELEFERICO", "MERCADO DE BRUJAS", "PLAZA MURILLO", "ILLIMANI", "JAEN", "PUMAKATARI", "QHUISPO", "HERNANDO SILES", "KILLIKILLI"
+    private string[][] bancoOpciones = {
+        new string[] { "¡Con su vuelto, chofer!", "¡Baja por favor!", "¡Esquina, m'hijo!" },
+        new string[] { "Frío polar todo el día", "Sol rajante y granizada a las 4", "Neblina silenciosa" },
+        new string[] { "Con refresco de durazno", "Con charla y apapudo", "Solo con agua" },
+        new string[] { "Marraqueta", "Sarna", "Hallulla" },
+        new string[] { "Mercado Lanza", "Mercado de Brujas", "Mercado Rodríguez" },
+        new string[] { "Illimani", "Huayna Potosí", "Mururata" },
+        new string[] { "Pumakatari", "Sariri", "Chikita" },
+        new string[] { "Killi Killi", "Jallpha La Paz", "Sopocachi Alto" }
     };
+
+    private int[] bancoRespuestas = { 2, 1, 1, 0, 1, 0, 0, 0 }; // Índices de la respuesta correcta de cada una
+
+    // Lista para guardar las 3 preguntas seleccionadas al azar en este viaje
+    private List<int> preguntasSeleccionadasRuta = new List<int>();
+
+    void Awake()
+    {
+        Instancia = this;
+        if (panelTrivia != null) panelTrivia.SetActive(false);
+    }
 
     void Update()
     {
-        // Se abre presionando la tecla P
-        if (!abierto && UnityEngine.InputSystem.Keyboard.current != null && UnityEngine.InputSystem.Keyboard.current.pKey.wasPressedThisFrame)
+        // Se abre con la P, solo si no está abierta y si aún le quedan intentos disponibles (máx 2)
+        if (!abierto && UnityEngine.InputSystem.Keyboard.current != null &&
+            UnityEngine.InputSystem.Keyboard.current.pKey.wasPressedThisFrame)
         {
-            abierto = true;
-            intento = "";
-
-            // Elige una pregunta al azar de las 10
-            indiceActual = Random.Range(0, pistas.Length);
-            mensaje = pistas[indiceActual];
-
-            Time.timeScale = 0f; // Pausa el juego
+            if (triviasJugadas < limiteUsosPorNivel)
+            {
+                AbrirTrivia();
+            }
+            else
+            {
+                Debug.Log("¡Ya completaste el límite de 2 Minibús Trivias en este nivel, m'hijo!");
+            }
         }
     }
 
-    void OnDestroy() { Time.timeScale = 1f; }
-
-    void Cerrar()
+    public void AbrirTrivia()
     {
-        abierto = false;
-        Time.timeScale = 1f; // Reanuda el juego
+        triviasJugadas++; // Aumentamos un intento usado
+        abierto = true;
+        preguntaActualIndex = 0;
+        puntosGanados = 0;
+
+        // Seleccionar 3 preguntas al azar del banco grande sin repetir en la misma partida
+        SeleccionarPreguntasAleatorias();
+
+        // Resetear la posición inicial del minibús en la primera parada
+        if (minibusIcono != null)
+        {
+            Vector2 pos = minibusIcono.anchoredPosition;
+            pos.x = (posicionesParadasX != null && posicionesParadasX.Length > 0) ? posicionesParadasX[0] : -100f;
+            minibusIcono.anchoredPosition = pos;
+        }
+
+        if (panelTrivia != null) panelTrivia.SetActive(true);
+        Time.timeScale = 0f;
+        MostrarPregunta();
     }
 
-    void VerificarRespuesta()
+    void SeleccionarPreguntasAleatorias()
     {
-        string respuestaUsuario = intento.Trim().ToUpperInvariant();
-        string respuestaCorrecta = respuestas[indiceActual];
+        preguntasSeleccionadasRuta.Clear();
+        List<int> indicesDisponibles = new List<int>();
+        for (int i = 0; i < bancoPreguntas.Length; i++) indicesDisponibles.Add(i);
 
-        if (respuestaUsuario == respuestaCorrecta)
+        // Elegir exactamente 3 preguntas al azar
+        for (int i = 0; i < totalParadasPorRuta; i++)
         {
-            mensaje = "¡Correcto! ¡Ganaste 20 monedas extras!";
+            if (indicesDisponibles.Count > 0)
+            {
+                int randomIndex = Random.Range(0, indicesDisponibles.Count);
+                preguntasSeleccionadasRuta.Add(indicesDisponibles[randomIndex]);
+                indicesDisponibles.RemoveAt(randomIndex); // Evitar repetirse en el mismo viaje
+            }
+        }
+    }
 
-            // Suma 20 monedas a las monedas totales del juego usando PlayerPrefs
-            int monedasActuales = PlayerPrefs.GetInt("monedas", 0);
-            PlayerPrefs.SetInt("monedas", monedasActuales + 20);
-            PlayerPrefs.Save();
+    void MostrarPregunta()
+    {
+        if (preguntaActualIndex < preguntasSeleccionadasRuta.Count)
+        {
+            int indexReal = preguntasSeleccionadasRuta[preguntaActualIndex];
+
+            if (textoPregunta != null)
+                textoPregunta.text = "🚎 Parada " + (preguntaActualIndex + 1) + " de 3:\n\n" + bancoPreguntas[indexReal];
+
+            if (textoFeedback != null)
+                textoFeedback.text = "";
+
+            for (int i = 0; i < botonesOpciones.Length; i++)
+            {
+                int btnIndex = i;
+                botonesOpciones[i].interactable = true;
+
+                var textoBtn = botonesOpciones[i].GetComponentInChildren<TextMeshProUGUI>();
+                if (textoBtn != null && i < bancoOpciones[indexReal].Length)
+                    textoBtn.text = bancoOpciones[indexReal][i];
+
+                botonesOpciones[i].onClick.RemoveAllListeners();
+                botonesOpciones[i].onClick.AddListener(() => Responder(btnIndex, indexReal));
+            }
         }
         else
         {
-            mensaje = "¡Fallaste! La respuesta era: " + respuestaCorrecta;
+            CerrarTrivia();
         }
-        intento = "";
     }
 
-    void OnGUI()
+    void Responder(int seleccion, int indexReal)
     {
-        if (!abierto) return;
+        foreach (var btn in botonesOpciones) btn.interactable = false;
 
-        float w = Screen.width;
-        float h = Screen.height;
-        int fs = Mathf.RoundToInt(h * 0.03f);
-
-        if (estiloTexto == null)
+        if (seleccion == bancoRespuestas[indexReal])
         {
-            estiloTexto = new GUIStyle(GUI.skin.label);
-            estiloTexto.fontSize = fs;
-            estiloTexto.fontStyle = FontStyle.Bold;
-            estiloTexto.alignment = TextAnchor.MiddleCenter;
-            estiloTexto.normal.textColor = Color.white;
-            estiloTexto.wordWrap = true;
+            puntosGanados += 20;
+            if (textoFeedback != null)
+                textoFeedback.text = "¡SAPE! ¡El minibús avanza a la siguiente parada!";
+
+            // 🚎 HACER QUE EL MINIBÚS AVANCE EN LA BARRA
+            if (minibusIcono != null)
+            {
+                Vector2 posActual = minibusIcono.anchoredPosition;
+
+                if (posicionesParadasX != null && posicionesParadasX.Length > preguntaActualIndex)
+                {
+                    posActual.x = posicionesParadasX[preguntaActualIndex];
+                }
+                else
+                {
+                    posActual.x += 60f; // Avance automático de respaldo
+                }
+
+                minibusIcono.anchoredPosition = posActual;
+            }
+
+            // Sumar monedas
+            int monedasActuales = PlayerPrefs.GetInt("monedas", 0);
+            PlayerPrefs.SetInt("monedas", monedasActuales + 20);
+            PlayerPrefs.Save();
+
+            if (Nivel1.Instancia != null)
+            {
+                for (int i = 0; i < 20; i++) Nivel1.Instancia.SumarMoneda();
+            }
+        }
+        else
+        {
+            if (textoFeedback != null)
+                textoFeedback.text = "¡TRANCON! Te quedaste atascado.";
         }
 
-        if (estiloInput == null)
+        StartCoroutine(EsperaYPasarSiguiente());
+    }
+
+    IEnumerator EsperaYPasarSiguiente()
+    {
+        yield return new WaitForSecondsRealtime(1.2f);
+
+        preguntaActualIndex++;
+
+        if (preguntaActualIndex < preguntasSeleccionadasRuta.Count)
         {
-            estiloInput = new GUIStyle(GUI.skin.textField);
-            estiloInput.fontSize = fs;
-            estiloInput.alignment = TextAnchor.MiddleCenter;
+            MostrarPregunta();
         }
-
-        if (estiloBoton == null)
+        else
         {
-            estiloBoton = new GUIStyle(GUI.skin.button);
-            estiloBoton.fontSize = fs;
+            CerrarTrivia();
         }
+    }
 
-        // Fondo oscuro translúcido
-        GUI.color = new Color(0f, 0f, 0f, 0.85f);
-        GUI.DrawTexture(new Rect(0, 0, w, h), Texture2D.whiteTexture);
-        GUI.color = Color.white;
-
-        float px = w * 0.15f;
-        float pw = w * 0.7f;
-        float py = h * 0.2f;
-
-        // Elementos visuales
-        GUI.Label(new Rect(px, py, pw, h * 0.1f), "TRIVIA PACEÑA - ¡GANATE MONEDAS!", estiloTexto);
-        GUI.Label(new Rect(px, py + h * 0.1f, pw, h * 0.12f), mensaje, estiloTexto);
-
-        GUI.SetNextControlName("campoRespuesta");
-        intento = GUI.TextField(new Rect(px + pw * 0.1f, py + h * 0.24f, pw * 0.8f, h * 0.08f), intento, 25, estiloInput);
-
-        // Detectar tecla Enter para enviar respuesta rápido
-        Event e = Event.current;
-        if (e.type == EventType.KeyDown && (e.keyCode == KeyCode.Return || e.keyCode == KeyCode.KeypadEnter))
-        {
-            VerificarRespuesta();
-            e.Use();
-        }
-
-        // Botones
-        if (GUI.Button(new Rect(px + pw * 0.1f, py + h * 0.36f, pw * 0.38f, h * 0.09f), "Comprobar", estiloBoton))
-        {
-            VerificarRespuesta();
-        }
-
-        if (GUI.Button(new Rect(px + pw * 0.52f, py + h * 0.36f, pw * 0.38f, h * 0.09f), "Continuar", estiloBoton))
-        {
-            Cerrar();
-        }
+    void CerrarTrivia()
+    {
+        abierto = false;
+        if (panelTrivia != null) panelTrivia.SetActive(false);
+        Time.timeScale = 1f;
     }
 }
