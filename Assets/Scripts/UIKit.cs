@@ -43,6 +43,70 @@ public static class UIKit
         return Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), pivote, ppu, 0, SpriteMeshType.FullRect);
     }
 
+    public static Sprite CargarSpriteBorde(string nombre, Vector4 borde)
+    {
+        var tex = Resources.Load<Texture2D>(nombre);
+        if (tex == null) { Debug.LogError("No encuentro la imagen '" + nombre + "' en Assets/Resources"); return null; }
+        tex.filterMode = FilterMode.Point;
+        return Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, borde);
+    }
+
+    public static void Estirar(RectTransform rt)
+    {
+        rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+        rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+    }
+
+    // Barra deslizante con dibujos pixel art (fondo, relleno gris y mando naranja)
+    public static Slider CrearSliderPixel(Transform padre, float x0, float y0, float x1, float y1,
+                                          float min, float max, float valor, UnityAction<float> alCambiar)
+    {
+        var g = Nuevo("Barra", padre);
+        Anclar(g.GetComponent<RectTransform>(), x0, y0, x1, y1);
+
+        var fondo = Nuevo("Fondo", g.transform);
+        Estirar(fondo.GetComponent<RectTransform>());
+        var fondoImg = fondo.AddComponent<Image>();
+        fondoImg.sprite = CargarSpriteBorde("ui_slider_fondo", new Vector4(8, 0, 8, 0));
+        fondoImg.type = Image.Type.Sliced;
+
+        var area = Nuevo("Area relleno", g.transform);
+        Estirar(area.GetComponent<RectTransform>());
+        var rel = Nuevo("Relleno", area.transform);
+        var relImg = rel.AddComponent<Image>();
+        relImg.sprite = CargarSpriteBorde("ui_slider_relleno", new Vector4(8, 0, 8, 0));
+        relImg.type = Image.Type.Sliced;
+        relImg.raycastTarget = false;
+        var relRt = rel.GetComponent<RectTransform>();
+        relRt.anchorMin = Vector2.zero; relRt.anchorMax = new Vector2(0.5f, 1f);
+        relRt.offsetMin = Vector2.zero; relRt.offsetMax = Vector2.zero;
+
+        var zona = Nuevo("Area mando", g.transform);
+        Estirar(zona.GetComponent<RectTransform>());
+        var mando = Nuevo("Mando", zona.transform);
+        var manImg = mando.AddComponent<Image>();
+        manImg.sprite = CargarSprite("ui_slider_mando", 0f, true);
+        var manRt = mando.GetComponent<RectTransform>();
+        manRt.anchorMin = new Vector2(0.5f, -0.3f);
+        manRt.anchorMax = new Vector2(0.5f, 1.3f);
+        manRt.offsetMin = Vector2.zero; manRt.offsetMax = Vector2.zero;
+        var ar = mando.AddComponent<AspectRatioFitter>();
+        ar.aspectMode = AspectRatioFitter.AspectMode.HeightControlsWidth;
+        ar.aspectRatio = 36f / 52f;
+
+        var s = g.AddComponent<Slider>();
+        s.targetGraphic = fondoImg;
+        s.transition = Selectable.Transition.None;
+        var nav = s.navigation; nav.mode = Navigation.Mode.None; s.navigation = nav;
+        s.fillRect = relRt;
+        s.handleRect = manRt;
+        s.direction = Slider.Direction.LeftToRight;
+        s.minValue = min; s.maxValue = max;
+        s.SetValueWithoutNotify(valor);
+        s.onValueChanged.AddListener(alCambiar);
+        return s;
+    }
+
     public static Sprite[] CargarFrames(string prefijo, int cantidad, float unidadesAlto, bool pie = true)
     {
         var lista = new Sprite[cantidad];

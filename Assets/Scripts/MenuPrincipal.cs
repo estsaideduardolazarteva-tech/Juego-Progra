@@ -5,8 +5,7 @@ using UnityEngine.UI;
 // Pantalla de inicio: imagen de fondo + botones invisibles encima + panel de opciones.
 public class MenuPrincipal : MonoBehaviour
 {
-    GameObject panelOpciones;
-    Slider sliderMusica;
+    OpcionesVista opciones;
 
     void Start()
     {
@@ -25,23 +24,22 @@ public class MenuPrincipal : MonoBehaviour
         UIKit.BotonInvisible(cont, "Nivel 1 (tarjeta)", 0.706f, 0.469f, 0.990f, 0.576f, Jugar);
         UIKit.BotonInvisible(cont, "Musica", 0.762f, 0.887f, 0.811f, 0.957f, AlternarMusica);
 
-        panelOpciones = OpcionesPanel.Crear(cont, CerrarOpciones, out sliderMusica);
+        opciones = OpcionesPanel.Crear(cont);
     }
 
     void Update()
     {
-        if (Entrada.EscapePresionado() && panelOpciones != null && panelOpciones.activeSelf)
-            CerrarOpciones();
+        if (Entrada.EscapePresionado() && opciones != null && opciones.Abierto)
+            opciones.Cancelar();
     }
 
     public void Jugar() { SceneManager.LoadScene("Nivel1"); }
     public void AbrirNiveles() { SceneManager.LoadScene("Niveles"); }
-    public void AbrirOpciones() { panelOpciones.SetActive(true); }
-    public void CerrarOpciones() { panelOpciones.SetActive(false); }
+    public void AbrirOpciones() { opciones.Abrir(); }
 
     void AlternarMusica()
     {
         Ajustes.Musica = Ajustes.Musica > 0f ? 0f : 1f;
-        if (sliderMusica != null) sliderMusica.SetValueWithoutNotify(Ajustes.Musica);
+        Ajustes.Guardar();
     }
 }

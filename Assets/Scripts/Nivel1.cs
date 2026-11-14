@@ -37,7 +37,8 @@ public class Nivel1 : MonoBehaviour
     Sprite sprMonedaFrente, sprMonedaDorso;
     Sprite cuadro;
     Texture2D texCorazon, texCorazonVacio, texMoneda;
-    GameObject pantallaPausa, panelOpciones;
+    GameObject pantallaPausa;
+    OpcionesVista opciones;
     readonly float[] checkpoints = { 2f, 26f, 52.5f, 80f };
     float puntoRespawn = 2f;
 
@@ -373,7 +374,7 @@ public class Nivel1 : MonoBehaviour
         // ESC: pausa (o cierra las opciones si estan abiertas)
         if (Entrada.EscapePresionado() && estado == Estado.Jugando)
         {
-            if (pausado && panelOpciones != null && panelOpciones.activeSelf) panelOpciones.SetActive(false);
+            if (pausado && opciones != null && opciones.Abierto) opciones.Cancelar();
             else AlternarPausa();
         }
         if (pausado) return;
@@ -502,7 +503,7 @@ public class Nivel1 : MonoBehaviour
         Time.timeScale = pausado ? 0f : 1f;
         if (pausado && pantallaPausa == null) CrearPausa();
         if (pantallaPausa != null) pantallaPausa.SetActive(pausado);
-        if (!pausado && panelOpciones != null) panelOpciones.SetActive(false);
+        if (!pausado && opciones != null && opciones.Abierto) opciones.Cancelar();
     }
 
     void CrearPausa()
@@ -510,13 +511,12 @@ public class Nivel1 : MonoBehaviour
         var cont = NuevaPantalla("PantallaPausa", "pantalla_pausa", out pantallaPausa);
         UIKit.BotonInvisible(cont, "Reiniciar nivel", 0.287f, 0.402f, 0.710f, 0.528f, Reiniciar);
         UIKit.BotonInvisible(cont, "Salir al menu", 0.287f, 0.547f, 0.710f, 0.672f, IrAlMenu);
-        UIKit.BotonInvisible(cont, "Opciones", 0.287f, 0.691f, 0.710f, 0.810f, () => panelOpciones.SetActive(true));
+        UIKit.BotonInvisible(cont, "Opciones", 0.287f, 0.691f, 0.710f, 0.810f, () => opciones.Abrir());
 
         var ayuda = UIKit.Texto(cont, "ESC para continuar", 40, Color.white, TextAnchor.MiddleCenter, 0.3f, 0.91f, 0.7f, 0.98f);
         ayuda.gameObject.AddComponent<Shadow>().effectColor = Color.black;
 
-        Slider sliderMusica;
-        panelOpciones = OpcionesPanel.Crear(cont, () => panelOpciones.SetActive(false), out sliderMusica);
+        opciones = OpcionesPanel.Crear(cont);
     }
 
     void Reiniciar() { SceneManager.LoadScene(SceneManager.GetActiveScene().name); }

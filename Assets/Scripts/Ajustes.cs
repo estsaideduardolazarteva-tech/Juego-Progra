@@ -1,32 +1,38 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-// Guarda volumen general, musica y brillo. Se crea solo y vive en todas las escenas.
+// Volumen general, musica y brillo.
+// Los cambios se ven/oyen al instante (vista previa) pero SOLO se guardan al apretar GUARDAR.
+// CANCELAR vuelve a los valores guardados.
 public static class Ajustes
 {
     const string KGeneral = "vol_general";
     const string KMusica = "vol_musica";
     const string KBrillo = "brillo";
 
+    static float general = 1f, musica = 1f, brillo = 1f;
     static Image velo;          // capa negra que simula el brillo
-    static AudioSource musica;  // reproduce Resources/musica (opcional)
+    static AudioSource fuenteMusica;  // reproduce Resources/musica (opcional)
 
-    public static float General
+    public static float General { get { return general; } set { general = value; Aplicar(); } }
+    public static float Musica { get { return musica; } set { musica = value; Aplicar(); } }
+    public static float Brillo { get { return brillo; } set { brillo = value; Aplicar(); } }
+
+    public static void Guardar()
     {
-        get { return PlayerPrefs.GetFloat(KGeneral, 1f); }
-        set { PlayerPrefs.SetFloat(KGeneral, value); Aplicar(); }
+        PlayerPrefs.SetFloat(KGeneral, general);
+        PlayerPrefs.SetFloat(KMusica, musica);
+        PlayerPrefs.SetFloat(KBrillo, brillo);
+        PlayerPrefs.Save();
     }
 
-    public static float Musica
+    // Vuelve a lo ultimo que se guardo
+    public static void Revertir()
     {
-        get { return PlayerPrefs.GetFloat(KMusica, 1f); }
-        set { PlayerPrefs.SetFloat(KMusica, value); Aplicar(); }
-    }
-
-    public static float Brillo
-    {
-        get { return PlayerPrefs.GetFloat(KBrillo, 1f); }
-        set { PlayerPrefs.SetFloat(KBrillo, value); Aplicar(); }
+        general = PlayerPrefs.GetFloat(KGeneral, 1f);
+        musica = PlayerPrefs.GetFloat(KMusica, 1f);
+        brillo = PlayerPrefs.GetFloat(KBrillo, 1f);
+        Aplicar();
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
@@ -47,19 +53,19 @@ public static class Ajustes
         rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
         rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
 
-        musica = go.AddComponent<AudioSource>();
-        musica.loop = true;
-        musica.playOnAwake = false;
+        fuenteMusica = go.AddComponent<AudioSource>();
+        fuenteMusica.loop = true;
+        fuenteMusica.playOnAwake = false;
         var clip = Resources.Load<AudioClip>("musica");
-        if (clip != null) { musica.clip = clip; musica.Play(); }
+        if (clip != null) { fuenteMusica.clip = clip; fuenteMusica.Play(); }
 
-        Aplicar();
+        Revertir();   // carga lo guardado y lo aplica
     }
 
     public static void Aplicar()
     {
-        AudioListener.volume = General;
-        if (musica != null) musica.volume = Musica;
-        if (velo != null) velo.color = new Color(0f, 0f, 0f, 1f - Brillo);
+        AudioListener.volume = general;
+        if (fuenteMusica != null) fuenteMusica.volume = musica;
+        if (velo != null) velo.color = new Color(0f, 0f, 0f, 1f - brillo);
     }
 }
