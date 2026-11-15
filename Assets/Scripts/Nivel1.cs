@@ -1,10 +1,12 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using TMPro;
 
-// NIVEL 1 - Avenida Camacho. Arma todo el nivel por codigo y controla vidas, monedas, tiempo,
-// pausa, derrota y victoria.
+// NIVEL 1 - Avenida Camacho. Arma todo el nivel por código y controla vidas, monedas, tiempo,
+// pausa, derrota, victoria y la Minibús Trivia generada dinámicamente.
 public class Nivel1 : MonoBehaviour
 {
     public static Nivel1 Instancia;
@@ -42,6 +44,47 @@ public class Nivel1 : MonoBehaviour
     readonly float[] checkpoints = { 2f, 26f, 52.5f, 80f };
     float puntoRespawn = 2f;
 
+    // ================= VARIABLES DE LA MARRAQUETA TRIVIA =================
+    private GameObject panelTrivia;
+    private TextMeshProUGUI textoPregunta;
+    private Button[] botonesOpciones = new Button[3];
+    private TextMeshProUGUI textoFeedback;
+    private RectTransform minibusIcono;
+
+    private float[] posicionesParadasX = { -150f, 0f, 150f };
+    private int limiteUsosPorNivel = 2; // Máximo 2 trivias por nivel
+    private int triviasJugadas = 0;
+
+    private bool triviaAbierta;
+    private int preguntaActualIndex = 0;
+    private const int totalParadasPorRuta = 3;
+
+    private string[] bancoPreguntas = {
+        "¿Qué gritas cuando el minibús va lleno y quieres bajar a media cuadra?",
+        "¿Cuál es la ley climática inquebrantable a las 2 de la tarde en La Paz?",
+        "¿Con qué se acompaña tradicionalmente un buen api con pastel en la mañana?",
+        "¿Cómo se llama el pan redondo y crujiente tradicional de la hoyada?",
+        "¿Qué famoso mercado tradicional es conocido por vender amuletos y ekekos?",
+        "¿Cuál es el nombre de la imponente montaña blanca que vigila la ciudad?",
+        "¿Cómo se llama el bus municipal de transporte masivo de la ciudad?",
+        "¿Cuál es el mirador turístico famoso por sus coloridos techos y vista panorámica?"
+    };
+
+    private string[][] bancoOpciones = {
+        new string[] { "¡Con su vuelto, chofer!", "¡Baja por favor!", "¡Esquina, m'hijo!" },
+        new string[] { "Frío polar todo el día", "Sol rajante y granizada a las 4", "Neblina silenciosa" },
+        new string[] { "Con refresco de durazno", "Con charla y apapudo", "Solo con agua" },
+        new string[] { "Marraqueta", "Sarna", "Hallulla" },
+        new string[] { "Mercado Lanza", "Mercado de Brujas", "Mercado Rodríguez" },
+        new string[] { "Illimani", "Huayna Potosí", "Mururata" },
+        new string[] { "Pumakatari", "Sariri", "Chikita" },
+        new string[] { "Killi Killi", "Jallpha La Paz", "Sopocachi Alto" }
+    };
+
+    private int[] bancoRespuestas = { 2, 1, 1, 0, 1, 0, 0, 0 };
+    private List<int> preguntasSeleccionadasRuta = new List<int>();
+    // ====================================================================
+
     GUIStyle estilo;
 
     public bool Invulnerable { get { return invulnerable > 0f; } }
@@ -70,13 +113,16 @@ public class Nivel1 : MonoBehaviour
         CrearMeta();
         CrearJugador();
         CrearCamara();
+
+        // Creamos la UI de la trivia por código para no tocar nada en el editor
+        CrearPanelTriviaPorCodigo();
     }
 
     // ================= CONSTRUCCION DEL NIVEL =================
 
     void CrearFondo()
     {
-        var sprite = UIKit.CargarSprite("fondo_nivel1", 10f);   // el fondo mide 10 unidades de alto
+        var sprite = UIKit.CargarSprite("fondo_nivel1", 10f);
         float ancho = sprite.bounds.size.x;
         int cantidad = Mathf.CeilToInt((Largo + 30f) / ancho) + 1;
         for (int i = 0; i < cantidad; i++)
@@ -92,7 +138,6 @@ public class Nivel1 : MonoBehaviour
 
     void CrearSuelo()
     {
-        // tramos de piso: {desde, hasta}. Entre tramo y tramo hay un hoyo.
         float[,] tramos = { { -6f, 22f }, { 25f, 48f }, { 51.5f, 75f }, { 79f, Largo } };
         var spHoyo = UIKit.CargarSprite("obs_hoyo", 1f);
         float anchoHoyo = spHoyo.bounds.size.x;
@@ -105,7 +150,6 @@ public class Nivel1 : MonoBehaviour
             if (i + 1 < tramos.GetLength(0))
             {
                 float h0 = b, h1 = tramos[i + 1, 0];
-                // dibujo del hoyo (imagen estirada)
                 var g = new GameObject("Hoyo " + i);
                 g.transform.SetParent(transform);
                 g.transform.position = new Vector2((h0 + h1) / 2f, -4.4f);
@@ -115,17 +159,13 @@ public class Nivel1 : MonoBehaviour
                 sr.sortingOrder = 1;
             }
         }
-        // paredes invisibles en los extremos
         Caja("Pared izquierda", new Vector2(-6.5f, 0f), new Vector2(1f, 30f));
         Caja("Pared derecha", new Vector2(Largo + 4.5f, 0f), new Vector2(1f, 30f));
     }
 
     void CrearObstaculos()
     {
-        // Obstaculos SOLIDOS (los puedes saltar o subirte encima)
-        // Obstaculo(imagen, x, alto total, fraccion solida, ancho de colision, peligro)
         Decorado("obs_bandera", 0.6f, 2.6f);
-
         Obstaculo("obs_graffiti", 10f, 1.6f, 1.0f, 0.95f, false);
         Obstaculo("obs_riel", 29.5f, 1.9f, 0.69f, 0.92f, false);
         Obstaculo("obs_caja", 45f, 1.1f, 1.0f, 0.95f, false);
@@ -135,14 +175,12 @@ public class Nivel1 : MonoBehaviour
         Obstaculo("obs_caja", 90.5f, 1.1f, 1.0f, 0.95f, false);
         Obstaculo("obs_barril", 92.6f, 1.1f, 1.0f, 0.9f, false);
 
-        // Obstaculos PELIGROSOS (te quitan una vida)
         Obstaculo("obs_cono", 14f, 0.9f, 0.85f, 0.6f, true);
         Obstaculo("obs_cono", 41.5f, 0.9f, 0.85f, 0.6f, true);
         Obstaculo("obs_pinchos", 55f, 0.7f, 0.8f, 0.8f, true);
         Obstaculo("obs_rodillo", 86f, 0.9f, 0.8f, 0.8f, true);
         Obstaculo("obs_cono", 96f, 0.9f, 0.85f, 0.6f, true);
 
-        // Plataformas altas: (x centro, ancho, altura de la parte de arriba)
         Plataforma(35.3f, 5f, 3.0f);
         Plataforma(73.3f, 5f, 3.0f);
     }
@@ -179,7 +217,6 @@ public class Nivel1 : MonoBehaviour
 
     void CrearMeta()
     {
-        // Minibus: al llegar, el personaje se sube y el minibus se va.
         float ancho = 6.4f;
         float alto = ancho * 430f / 900f;
         var sprAbierto = UIKit.CargarSprite("minibus_abierto", alto, false, true);
@@ -192,7 +229,6 @@ public class Nivel1 : MonoBehaviour
         busSr.sprite = sprAbierto;
         busSr.sortingOrder = 3;
 
-        // zona que activa la meta (justo antes de la puerta)
         var g = new GameObject("Meta");
         g.transform.SetParent(transform);
         g.transform.position = new Vector2(BusX - 1.6f, SueloY + 2.5f);
@@ -223,7 +259,7 @@ public class Nivel1 : MonoBehaviour
 
         var bc = g.AddComponent<BoxCollider2D>();
         bc.size = new Vector2(0.65f, 2.1f);
-        bc.offset = new Vector2(0f, 1.05f);   // el sprite tiene el punto de anclaje en los pies
+        bc.offset = new Vector2(0f, 1.05f);
         var sinFriccion = new PhysicsMaterial2D("SinFriccion");
         sinFriccion.friction = 0f;
         sinFriccion.bounciness = 0f;
@@ -260,9 +296,106 @@ public class Nivel1 : MonoBehaviour
         cam.transform.position = new Vector3(-6f + mitad, 0f, -10f);
     }
 
-    // ================= PIEZAS =================
+    // ================= CREACION DE LA TRIVIA POR CODIGO =================
+    void CrearPanelTriviaPorCodigo()
+    {
+        // Canvas independiente para la Trivia con orden alto para que tape todo
+        var canvasObj = UIKit.CrearCanvas("CanvasTriviaDinamico");
+        var canvas = canvasObj.GetComponent<Canvas>();
+        canvas.sortingOrder = 200;
+        canvasObj.transform.SetParent(transform, false);
 
-    // Colision invisible
+        // Panel de fondo semi-transparente oscuro
+        panelTrivia = new GameObject("PanelFondoTrivia");
+        panelTrivia.transform.SetParent(canvasObj.transform, false);
+        var imgFondo = panelTrivia.AddComponent<Image>();
+        imgFondo.color = new Color(0f, 0f, 0f, 0.85f);
+        var rtFondo = panelTrivia.GetComponent<RectTransform>();
+        rtFondo.anchorMin = Vector2.zero;
+        rtFondo.anchorMax = Vector2.one;
+        rtFondo.sizeDelta = Vector2.zero;
+
+        // Texto de Pregunta
+        var objPregunta = new GameObject("TextoPregunta");
+        objPregunta.transform.SetParent(panelTrivia.transform, false);
+        textoPregunta = objPregunta.AddComponent<TextMeshProUGUI>();
+        textoPregunta.fontSize = 32;
+        textoPregunta.alignment = TextAlignmentOptions.Center;
+        textoPregunta.color = Color.white;
+        var rtPregunta = objPregunta.GetComponent<RectTransform>();
+        rtPregunta.anchorMin = new Vector2(0.1f, 0.6f);
+        rtPregunta.anchorMax = new Vector2(0.9f, 0.85f);
+        rtPregunta.sizeDelta = Vector2.zero;
+
+        // Botones de Opciones (3 botones)
+        float posY = 0.45f;
+        for (int i = 0; i < 3; i++)
+        {
+            var btnObj = new GameObject("BotonOpcion_" + i);
+            btnObj.transform.SetParent(panelTrivia.transform, false);
+            var imgBtn = btnObj.AddComponent<Image>();
+            imgBtn.color = new Color(0.2f, 0.4f, 0.8f);
+            var btn = btnObj.AddComponent<Button>();
+            btn.targetGraphic = imgBtn;
+
+            var rtBtn = btnObj.GetComponent<RectTransform>();
+            rtBtn.anchorMin = new Vector2(0.25f, posY - 0.1f);
+            rtBtn.anchorMax = new Vector2(0.75f, posY);
+            rtBtn.sizeDelta = Vector2.zero;
+
+            // Texto dentro del botón
+            var txtBtnObj = new GameObject("TextoBtn");
+            txtBtnObj.transform.SetParent(btnObj.transform, false);
+            var txtBtn = txtBtnObj.AddComponent<TextMeshProUGUI>();
+            txtBtn.fontSize = 24;
+            txtBtn.alignment = TextAlignmentOptions.Center;
+            txtBtn.color = Color.white;
+            var rtTxt = txtBtnObj.GetComponent<RectTransform>();
+            rtTxt.anchorMin = Vector2.zero;
+            rtTxt.anchorMax = Vector2.one;
+            rtTxt.sizeDelta = Vector2.zero;
+
+            botonesOpciones[i] = btn;
+            posY -= 0.13f;
+        }
+
+        // Texto de Feedback (Acierto o Trancón)
+        var objFeedback = new GameObject("TextoFeedback");
+        objFeedback.transform.SetParent(panelTrivia.transform, false);
+        textoFeedback = objFeedback.AddComponent<TextMeshProUGUI>();
+        textoFeedback.fontSize = 28;
+        textoFeedback.alignment = TextAlignmentOptions.Center;
+        textoFeedback.color = Color.yellow;
+        var rtFeedback = objFeedback.GetComponent<RectTransform>();
+        rtFeedback.anchorMin = new Vector2(0.1f, 0.05f);
+        rtFeedback.anchorMax = new Vector2(0.9f, 0.18f);
+        rtFeedback.sizeDelta = Vector2.zero;
+
+        // Barra e Icono del Minibús
+        var barraObj = new GameObject("BarraRuta");
+        barraObj.transform.SetParent(panelTrivia.transform, false);
+        var imgBarra = barraObj.AddComponent<Image>();
+        imgBarra.color = new Color(0.3f, 0.3f, 0.3f);
+        var rtBarra = barraObj.GetComponent<RectTransform>();
+        rtBarra.anchorMin = new Vector2(0.35f, 0.88f);
+        rtBarra.anchorMax = new Vector2(0.65f, 0.92f);
+        rtBarra.sizeDelta = Vector2.zero;
+
+        var iconoObj = new GameObject("MinibusIcono");
+        iconoObj.transform.SetParent(barraObj.transform, false);
+        var imgIcono = iconoObj.AddComponent<Image>();
+        imgIcono.color = Color.yellow; // Representa el minibús
+        minibusIcono = iconoObj.GetComponent<RectTransform>();
+        minibusIcono.anchorMin = new Vector2(0.5f, 0.5f);
+        minibusIcono.anchorMax = new Vector2(0.5f, 0.5f);
+        minibusIcono.sizeDelta = new Vector2(30, 30);
+        minibusIcono.anchoredPosition = new Vector2(posicionesParadasX[0], 0);
+
+        // Apagar el panel al inicio
+        panelTrivia.SetActive(false);
+    }
+    // ====================================================================
+
     void Caja(string nombre, Vector2 centro, Vector2 tam)
     {
         var g = new GameObject(nombre);
@@ -272,7 +405,6 @@ public class Nivel1 : MonoBehaviour
         bc.size = tam;
     }
 
-    // Objeto con dibujo apoyado en el piso. 'fraccion' = que parte de abajo es solida (el resto es adorno).
     void Obstaculo(string imagen, float x, float alto, float fraccion, float anchoCol, bool peligro)
     {
         var sp = UIKit.CargarSprite(imagen, alto, false, true);
@@ -295,7 +427,6 @@ public class Nivel1 : MonoBehaviour
         }
     }
 
-    // Solo adorno, sin colision
     void Decorado(string imagen, float x, float alto)
     {
         var g = new GameObject(imagen);
@@ -306,7 +437,6 @@ public class Nivel1 : MonoBehaviour
         sr.sortingOrder = 2;
     }
 
-    // Losa de piedra flotante (la textura se repite a lo ancho)
     void Plataforma(float x, float ancho, float altoArriba)
     {
         float grosor = 0.55f;
@@ -367,17 +497,28 @@ public class Nivel1 : MonoBehaviour
         g.AddComponent<Enemigo>().Iniciar(caminar, aplastado, izq, der);
     }
 
-    // ================= REGLAS DEL JUEGO =================
-
     void Update()
     {
-        // ESC: pausa (o cierra las opciones si estan abiertas)
+        // Abrir Trivia con la tecla P
+        if (!pausado && UnityEngine.InputSystem.Keyboard.current != null &&
+            UnityEngine.InputSystem.Keyboard.current.pKey.wasPressedThisFrame && estado == Estado.Jugando)
+        {
+            if (!triviaAbierta && triviasJugadas < limiteUsosPorNivel)
+            {
+                AbrirTrivia();
+            }
+            else if (!triviaAbierta)
+            {
+                Debug.Log("¡Ya completaste el límite de 2 Minibús Trivias en este nivel, m'hijo!");
+            }
+        }
+
         if (Entrada.EscapePresionado() && estado == Estado.Jugando)
         {
             if (pausado && opciones != null && opciones.Abierto) opciones.Cancelar();
             else AlternarPausa();
         }
-        if (pausado) return;
+        if (pausado || triviaAbierta) return;
 
         if (tAyuda > 0f) tAyuda -= Time.deltaTime;
 
@@ -398,6 +539,132 @@ public class Nivel1 : MonoBehaviour
         foreach (float cp in checkpoints) if (x >= cp) puntoRespawn = cp;
 
         if (jugador.transform.position.y < -8f) Caida();
+    }
+
+    public void AbrirTrivia()
+    {
+        triviasJugadas++;
+        triviaAbierta = true;
+        preguntaActualIndex = 0;
+
+        SeleccionarPreguntasAleatorias();
+
+        if (minibusIcono != null)
+        {
+            Vector2 pos = minibusIcono.anchoredPosition;
+            pos.x = (posicionesParadasX != null && posicionesParadasX.Length > 0) ? posicionesParadasX[0] : -100f;
+            minibusIcono.anchoredPosition = pos;
+        }
+
+        if (panelTrivia != null) panelTrivia.SetActive(true);
+        Time.timeScale = 0f;
+        MostrarPregunta();
+    }
+
+    void SeleccionarPreguntasAleatorias()
+    {
+        preguntasSeleccionadasRuta.Clear();
+        List<int> indicesDisponibles = new List<int>();
+        for (int i = 0; i < bancoPreguntas.Length; i++) indicesDisponibles.Add(i);
+
+        for (int i = 0; i < totalParadasPorRuta; i++)
+        {
+            if (indicesDisponibles.Count > 0)
+            {
+                int randomIndex = Random.Range(0, indicesDisponibles.Count);
+                preguntasSeleccionadasRuta.Add(indicesDisponibles[randomIndex]);
+                indicesDisponibles.RemoveAt(randomIndex);
+            }
+        }
+    }
+
+    void MostrarPregunta()
+    {
+        if (preguntaActualIndex < preguntasSeleccionadasRuta.Count)
+        {
+            int indexReal = preguntasSeleccionadasRuta[preguntaActualIndex];
+
+            if (textoPregunta != null)
+                textoPregunta.text = "🚎 Parada " + (preguntaActualIndex + 1) + " de 3:\n\n" + bancoPreguntas[indexReal];
+
+            if (textoFeedback != null)
+                textoFeedback.text = "";
+
+            for (int i = 0; i < botonesOpciones.Length; i++)
+            {
+                int btnIndex = i;
+                botonesOpciones[i].interactable = true;
+
+                var textoBtn = botonesOpciones[i].GetComponentInChildren<TextMeshProUGUI>();
+                if (textoBtn != null && i < bancoOpciones[indexReal].Length)
+                    textoBtn.text = bancoOpciones[indexReal][i];
+
+                botonesOpciones[i].onClick.RemoveAllListeners();
+                botonesOpciones[i].onClick.AddListener(() => Responder(btnIndex, indexReal));
+            }
+        }
+        else
+        {
+            CerrarTrivia();
+        }
+    }
+
+    void Responder(int seleccion, int indexReal)
+    {
+        foreach (var btn in botonesOpciones) btn.interactable = false;
+
+        if (seleccion == bancoRespuestas[indexReal])
+        {
+            if (textoFeedback != null)
+                textoFeedback.text = "¡SAPE! ¡El minibús avanza a la siguiente parada!";
+
+            if (minibusIcono != null)
+            {
+                Vector2 posActual = minibusIcono.anchoredPosition;
+                if (posicionesParadasX != null && posicionesParadasX.Length > preguntaActualIndex)
+                {
+                    posActual.x = posicionesParadasX[preguntaActualIndex];
+                }
+                else
+                {
+                    posActual.x += 60f;
+                }
+                minibusIcono.anchoredPosition = posActual;
+            }
+
+            monedas += 20;
+            PlayerPrefs.SetInt("monedas", PlayerPrefs.GetInt("monedas", 0) + 20);
+            PlayerPrefs.Save();
+        }
+        else
+        {
+            if (textoFeedback != null)
+                textoFeedback.text = "¡TRANCON! Te quedaste atascado.";
+        }
+
+        StartCoroutine(EsperaYPasarSiguiente());
+    }
+
+    IEnumerator EsperaYPasarSiguiente()
+    {
+        yield return new WaitForSecondsRealtime(1.2f);
+        preguntaActualIndex++;
+
+        if (preguntaActualIndex < preguntasSeleccionadasRuta.Count)
+        {
+            MostrarPregunta();
+        }
+        else
+        {
+            CerrarTrivia();
+        }
+    }
+
+    void CerrarTrivia()
+    {
+        triviaAbierta = false;
+        if (panelTrivia != null) panelTrivia.SetActive(false);
+        Time.timeScale = 1f;
     }
 
     void Caida()
@@ -436,19 +703,18 @@ public class Nivel1 : MonoBehaviour
         StartCoroutine(SecuenciaMeta());
     }
 
-    // El personaje camina a la puerta, se sube y el minibus se va.
     IEnumerator SecuenciaMeta()
     {
         jugador.IrA(BusX);
         float limite = 5f;
         while (!jugador.LlegoAuto && limite > 0f) { limite -= Time.deltaTime; yield return null; }
 
-        jugador.Ocultar();                         // ya subio
+        jugador.Ocultar();
         yield return new WaitForSeconds(0.5f);
-        busSr.sprite = busCerrado;                 // cierra la puerta
+        busSr.sprite = busCerrado;
         yield return new WaitForSeconds(0.6f);
 
-        camSigue.objetivo = busSr.transform;       // la camara sigue al minibus
+        camSigue.objetivo = busSr.transform;
         float vel = 0f, t = 0f;
         while (t < 2.8f)
         {
@@ -459,8 +725,6 @@ public class Nivel1 : MonoBehaviour
         }
         MostrarVictoria();
     }
-
-    // ================= PANTALLAS (pausa, derrota, victoria) =================
 
     Transform NuevaPantalla(string nombre, string imagen, out GameObject raiz)
     {
@@ -524,14 +788,10 @@ public class Nivel1 : MonoBehaviour
 
     void ProximoNivel()
     {
-        // Cuando exista Nivel2 en Build Settings, carga ese; mientras tanto vuelve a la pantalla de niveles.
         if (Application.CanStreamedLevelBeLoaded("Nivel2")) SceneManager.LoadScene("Nivel2");
         else SceneManager.LoadScene("Niveles");
     }
 
-    // ================= TEXTOS E ICONOS EN PANTALLA =================
-
-    // Corazon dibujado pixel por pixel (con borde oscuro)
     Texture2D CrearCorazon(Color relleno)
     {
         string[] mapa =
@@ -570,7 +830,7 @@ public class Nivel1 : MonoBehaviour
 
     void OnGUI()
     {
-        if (pausado || pantallaFin) return;
+        if (pausado || pantallaFin || triviaAbierta) return;
 
         if (estilo == null)
         {
@@ -581,23 +841,20 @@ public class Nivel1 : MonoBehaviour
         float icono = h * 0.06f;
         estilo.fontSize = Mathf.RoundToInt(h * 0.045f);
 
-        // vidas (corazones)
         for (int i = 0; i < VidasIniciales; i++)
         {
             var r = new Rect(20f + i * icono * 1.2f, 14f, icono, icono * 0.9f);
             GUI.DrawTexture(r, i < vidas ? texCorazon : texCorazonVacio, ScaleMode.ScaleToFit, true);
         }
-        // monedas
         if (texMoneda != null)
             GUI.DrawTexture(new Rect(20f, 14f + icono * 1.15f, icono, icono), texMoneda, ScaleMode.ScaleToFit, true);
         Dibujar(new Rect(20f + icono * 1.2f, 14f + icono * 1.15f, 300f, icono), "x " + monedas, TextAnchor.MiddleLeft);
 
-        // tiempo
         int seg = Mathf.CeilToInt(tiempo);
         Dibujar(new Rect(w / 2f - 20f, 10f, w / 2f, h * 0.08f), "TIEMPO: " + (seg / 60) + ":" + (seg % 60).ToString("00"), TextAnchor.UpperRight);
 
         if (tAyuda > 0f && estado == Estado.Jugando)
-            Dibujar(new Rect(0f, h - h * 0.1f, w, h * 0.08f), "A / D o flechas: mover     ESPACIO: saltar     ESC: pausa", TextAnchor.MiddleCenter);
+            Dibujar(new Rect(0f, h - h * 0.1f, w, h * 0.08f), "A / D o flechas: mover     ESPACIO: saltar     ESC: pausa     P: Minibús Trivia", TextAnchor.MiddleCenter);
 
         if (estado == Estado.Perdido)
         {
