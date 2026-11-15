@@ -694,12 +694,20 @@ public class Nivel1 : MonoBehaviour
         mensaje = texto;
         tFin = 1.3f;
         jugador.Congelar();
+        // 🔊 Reproducir sonido de derrota desde la Jerarquía
+        GameObject objPerdiste = GameObject.Find("perdiste");
+        if (objPerdiste != null) objPerdiste.GetComponent<AudioSource>()?.Play();
     }
 
     public void LlegarAMeta()
     {
         if (estado != Estado.Jugando) return;
         estado = Estado.Ganado;
+        StartCoroutine(SecuenciaMeta());
+        GameObject objGanaste = GameObject.Find("ganaste");
+        if (objGanaste != null) objGanaste.GetComponent<AudioSource>()?.Play();
+
+        StartCoroutine(SecuenciaMeta());
         StartCoroutine(SecuenciaMeta());
     }
 
