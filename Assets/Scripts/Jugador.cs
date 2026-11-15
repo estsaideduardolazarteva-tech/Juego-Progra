@@ -15,6 +15,10 @@ public class Jugador : MonoBehaviour
     bool enSuelo, congelado, oculto, auto, llego;
     float destino;
 
+    // Referencias a los sonidos de la jerarquía
+    AudioSource sonidoSaltar;
+    AudioSource sonidoCaminar;
+
     Vector2 Vel
     {
         get
@@ -45,6 +49,13 @@ public class Jugador : MonoBehaviour
         rb = GetComponent<Rigidbody2D>();
         col = GetComponent<BoxCollider2D>();
         sr.sprite = parado[0];
+
+        // Busca los audios que arrastraste a la Jerarquía
+        GameObject objSaltar = GameObject.Find("saltar");
+        if (objSaltar != null) sonidoSaltar = objSaltar.GetComponent<AudioSource>();
+
+        GameObject objCaminar = GameObject.Find("caminar");
+        if (objCaminar != null) sonidoCaminar = objCaminar.GetComponent<AudioSource>();
     }
 
     void Update()
@@ -78,14 +89,16 @@ public class Jugador : MonoBehaviour
             v.y = fuerzaSalto;
             saltoBuffer = 0f;
             coyote = 0f;
+
+            // Suena al saltar
+            if (sonidoSaltar != null) sonidoSaltar.Play();
         }
-        if (Entrada.SaltoSoltado() && v.y > 0f) v.y *= 0.5f; // salto corto si sueltas rapido
+        if (Entrada.SaltoSoltado() && v.y > 0f) v.y *= 0.5f;
         Vel = v;
 
         Animar();
     }
 
-    // Al llegar a la meta el personaje camina solo hasta la puerta del minibus.
     void AutoCaminar()
     {
         enSuelo = ComprobarSuelo();
@@ -123,7 +136,6 @@ public class Jugador : MonoBehaviour
 
         if (!enSuelo)
         {
-            // fotograma del salto segun si sube o baja
             float t = Mathf.InverseLerp(fuerzaSalto, -fuerzaSalto, Vel.y);
             int i = Mathf.Clamp(Mathf.FloorToInt(t * saltar.Length), 0, saltar.Length - 1);
             sr.sprite = saltar[i];
@@ -132,14 +144,25 @@ public class Jugador : MonoBehaviour
         {
             animT += Time.deltaTime * 12f;
             sr.sprite = correr[(int)animT % correr.Length];
+
+            // Suena al caminar en el suelo (sin encimarse)
+            if (sonidoCaminar != null && !sonidoCaminar.isPlaying)
+            {
+                sonidoCaminar.Play();
+            }
         }
         else
         {
             animT += Time.deltaTime * 5f;
             sr.sprite = parado[(int)animT % parado.Length];
+
+            // Detiene el sonido de pasos apenas te quedas quieto
+            if (sonidoCaminar != null && sonidoCaminar.isPlaying)
+            {
+                sonidoCaminar.Stop();
+            }
         }
 
-        // parpadeo cuando esta invulnerable
         bool parpadeo = Nivel1.Instancia != null && Nivel1.Instancia.Invulnerable && ((int)(Time.time * 15f) % 2 == 0);
         sr.enabled = !parpadeo;
     }
@@ -168,6 +191,7 @@ public class Jugador : MonoBehaviour
         inputX = 0f;
         sr.enabled = true;
         sr.sprite = parado[0];
+        if (sonidoCaminar != null) sonidoCaminar.Stop();
     }
 
     public void IrA(float x)
@@ -185,5 +209,6 @@ public class Jugador : MonoBehaviour
         sr.enabled = false;
         Vel = Vector2.zero;
         rb.simulated = false;
+        if (sonidoCaminar != null) sonidoCaminar.Stop();
     }
 }
