@@ -1,6 +1,6 @@
 using UnityEngine;
 
-// Movimiento tipo Mario: correr, saltar (mas alto si mantienes), animacion de caminar con 2 sprites.
+// Movimiento tipo Mario: correr, saltar (mas alto si mantienes) y animaciones de parado, correr y saltar.
 public class Jugador : MonoBehaviour
 {
     public float velocidad = 6.5f;
@@ -9,10 +9,11 @@ public class Jugador : MonoBehaviour
     Rigidbody2D rb;
     BoxCollider2D col;
     SpriteRenderer sr;
-    Sprite parado, paso1, paso2;
+    Sprite[] parado, correr, saltar;
 
     float inputX, saltoBuffer, coyote, animT, bloqueo;
-    bool enSuelo, congelado;
+    bool enSuelo, congelado, oculto, auto, llego;
+    float destino;
 
     Vector2 Vel
     {
@@ -35,25 +36,24 @@ public class Jugador : MonoBehaviour
     }
 
     public float VelY { get { return Vel.y; } }
+    public bool LlegoAuto { get { return llego; } }
 
-    public void Iniciar(Sprite sParado, Sprite sPaso1, Sprite sPaso2)
+    public void Iniciar(Sprite[] sParado, Sprite[] sCorrer, Sprite[] sSaltar)
     {
-        parado = sParado; paso1 = sPaso1; paso2 = sPaso2;
+        parado = sParado; correr = sCorrer; saltar = sSaltar;
         sr = GetComponent<SpriteRenderer>();
         rb = GetComponent<Rigidbody2D>();
         col = GetComponent<BoxCollider2D>();
-        sr.sprite = parado;
-
-        if (PlayerPrefs.GetInt("marraqueta_gratis", 0) == 1)
-        {
-            velocidad = 10f; // Sube la velocidad normal (que era 6.5f) a 10f para ir super rápido
-            Debug.Log("¡Efecto Marraqueta Activado! Velocidad aumentada.");
-        }
+        sr.sprite = parado[0];
     }
 
     void Update()
     {
         if (rb == null) return;
+        if (Nivel1.Instancia != null && Nivel1.Instancia.Pausado) return;
+        if (oculto) return;
+
+        if (auto) { AutoCaminar(); return; }
 
         if (congelado)
         {
@@ -78,15 +78,30 @@ public class Jugador : MonoBehaviour
             v.y = fuerzaSalto;
             saltoBuffer = 0f;
             coyote = 0f;
-            AudioClip clipSalto = Resources.Load<AudioClip>("Audio/salto"); // Asegúrate de que tu archivo de audio en la carpeta Resources/Audio se llame "salto"
-            if (clipSalto != null)
-            {
-                AudioSource.PlayClipAtPoint(clipSalto, transform.position, 0.7f);
-            }
         }
         if (Entrada.SaltoSoltado() && v.y > 0f) v.y *= 0.5f; // salto corto si sueltas rapido
         Vel = v;
 
+        Animar();
+    }
+
+    // Al llegar a la meta el personaje camina solo hasta la puerta del minibus.
+    void AutoCaminar()
+    {
+        enSuelo = ComprobarSuelo();
+        float dx = destino - transform.position.x;
+        if (Mathf.Abs(dx) < 0.12f)
+        {
+            Vel = new Vector2(0f, Vel.y);
+            inputX = 0f;
+            auto = false;
+            congelado = true;
+            llego = true;
+            sr.sprite = parado[0];
+            return;
+        }
+        inputX = Mathf.Sign(dx);
+        Vel = new Vector2(inputX * velocidad * 0.7f, Vel.y);
         Animar();
     }
 
@@ -106,13 +121,23 @@ public class Jugador : MonoBehaviour
         if (inputX > 0.1f) sr.flipX = false;
         else if (inputX < -0.1f) sr.flipX = true;
 
-        if (!enSuelo) sr.sprite = paso1;
+        if (!enSuelo)
+        {
+            // fotograma del salto segun si sube o baja
+            float t = Mathf.InverseLerp(fuerzaSalto, -fuerzaSalto, Vel.y);
+            int i = Mathf.Clamp(Mathf.FloorToInt(t * saltar.Length), 0, saltar.Length - 1);
+            sr.sprite = saltar[i];
+        }
         else if (Mathf.Abs(inputX) > 0.1f)
         {
-            animT += Time.deltaTime;
-            sr.sprite = ((int)(animT / 0.16f) % 2 == 0) ? paso1 : paso2;
+            animT += Time.deltaTime * 12f;
+            sr.sprite = correr[(int)animT % correr.Length];
         }
-        else { sr.sprite = parado; animT = 0f; }
+        else
+        {
+            animT += Time.deltaTime * 5f;
+            sr.sprite = parado[(int)animT % parado.Length];
+        }
 
         // parpadeo cuando esta invulnerable
         bool parpadeo = Nivel1.Instancia != null && Nivel1.Instancia.Invulnerable && ((int)(Time.time * 15f) % 2 == 0);
@@ -139,8 +164,26 @@ public class Jugador : MonoBehaviour
     public void Congelar()
     {
         congelado = true;
+        auto = false;
         inputX = 0f;
         sr.enabled = true;
-        sr.sprite = parado;
+        sr.sprite = parado[0];
+    }
+
+    public void IrA(float x)
+    {
+        destino = x;
+        auto = true;
+        llego = false;
+        congelado = false;
+        sr.enabled = true;
+    }
+
+    public void Ocultar()
+    {
+        oculto = true;
+        sr.enabled = false;
+        Vel = Vector2.zero;
+        rb.simulated = false;
     }
 }
