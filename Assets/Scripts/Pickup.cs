@@ -30,6 +30,11 @@ public class Pickup : MonoBehaviour
         {
             case TipoPickup.Moneda:
                 Nivel1.Instancia.SumarMoneda();
+
+                // 🔊 Reproducir sonido de moneda desde la Jerarquía
+                GameObject objMoneda = GameObject.Find("monedas (2)");
+                if (objMoneda != null) objMoneda.GetComponent<AudioSource>()?.Play();
+
                 Destroy(gameObject);
                 break;
             case TipoPickup.Peligro:
