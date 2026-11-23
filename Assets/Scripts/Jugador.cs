@@ -10,6 +10,8 @@ public class Jugador : MonoBehaviour
     BoxCollider2D col;
     SpriteRenderer sr;
     Sprite[] parado, correr, saltar;
+    AudioSource pasos;
+    AudioClip sonidoSalto;
 
     float inputX, saltoBuffer, coyote, animT, bloqueo;
     bool enSuelo, congelado, oculto, auto, llego;
@@ -45,9 +47,28 @@ public class Jugador : MonoBehaviour
         rb = GetComponent<Rigidbody2D>();
         col = GetComponent<BoxCollider2D>();
         sr.sprite = parado[0];
+
+        pasos = gameObject.AddComponent<AudioSource>();
+        pasos.playOnAwake = false;
+        pasos.loop = true;
+        pasos.volume = 0.45f;
+        pasos.clip = Ajustes.CargarSonido("caminar");
+        sonidoSalto = Ajustes.CargarSonido("saltar");
     }
 
     void Update()
+    {
+        Mover();
+        if (pasos == null || pasos.clip == null) return;
+
+        bool caminando = Time.timeScale > 0f && !oculto && !congelado &&
+                         enSuelo && Mathf.Abs(Vel.y) <= 0.1f &&
+                         Mathf.Abs(inputX) > 0.1f && Mathf.Abs(Vel.x) > 0.1f;
+        if (caminando && !pasos.isPlaying) pasos.Play();
+        else if (!caminando && pasos.isPlaying) pasos.Stop();
+    }
+
+    void Mover()
     {
         if (rb == null) return;
         if (Nivel.Instancia != null && Nivel.Instancia.Pausado) return;
@@ -76,6 +97,7 @@ public class Jugador : MonoBehaviour
         if (saltoBuffer > 0f && coyote > 0f)
         {
             v.y = fuerzaSalto;
+            Ajustes.Sonar(sonidoSalto, 0.7f);
             saltoBuffer = 0f;
             coyote = 0f;
         }
