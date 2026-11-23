@@ -55,10 +55,12 @@ public class Nivel : MonoBehaviour
     void Awake() { Instancia = this; }
 
     AudioClip sonidoMoneda, sonidoVictoria, sonidoDerrota;
+    Minijuego minijuego;
 
     void Start()
     {
         sonidoMoneda = Ajustes.CargarSonido("monedas (2)");
+        minijuego = new Minijuego(numero, transform, AgregarMonedas);
         sonidoVictoria = Ajustes.CargarSonido("ganaste");
         sonidoDerrota = Ajustes.CargarSonido("perdiste");
         Configurar();
@@ -741,6 +743,18 @@ public class Nivel : MonoBehaviour
 
     void Update()
     {
+        if (minijuego.Abierto)
+        {
+            minijuego.Actualizar();
+            return;
+        }
+
+        if (estado == Estado.Jugando && !pausado && minijuego.Disponible && Entrada.MinijuegoPresionado())
+        {
+            minijuego.Abrir();
+            return;
+        }
+
         // ESC: pausa (o cierra las opciones si estan abiertas)
         if (Entrada.EscapePresionado() && estado == Estado.Jugando)
         {
@@ -788,9 +802,11 @@ public class Nivel : MonoBehaviour
         jugador.Empujar(dir);
     }
 
-    public void SumarMoneda()
+    public void SumarMoneda() { AgregarMonedas(1); }
+
+    void AgregarMonedas(int cantidad)
     {
-        monedas++;
+        monedas += cantidad;
         Ajustes.Sonar(sonidoMoneda);
     }
 
@@ -950,7 +966,7 @@ public class Nivel : MonoBehaviour
 
     void OnGUI()
     {
-        if (pausado || pantallaFin) return;
+        if (pausado || pantallaFin || (minijuego != null && minijuego.Abierto)) return;
 
         float w = Screen.width, h = Screen.height;
         float icono = h * 0.06f;
@@ -984,6 +1000,8 @@ public class Nivel : MonoBehaviour
 
         if (tAyuda > 0f && estado == Estado.Jugando)
             PixelFuente.DibujarCentro("A D MOVER    ESPACIO SALTAR    ESC PAUSA", w / 2f, h - h * 0.09f, h * 0.045f);
+        if (estado == Estado.Jugando && minijuego != null && minijuego.Disponible)
+            PixelFuente.DibujarCentro("P MINIJUEGO", w / 2f, h - h * 0.045f, h * 0.038f);
 
         if (estado == Estado.Perdido)
             PixelFuente.DibujarCentro(mensaje, w / 2f, h * 0.3f, h * 0.11f);

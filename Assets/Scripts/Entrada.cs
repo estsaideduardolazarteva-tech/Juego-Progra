@@ -40,6 +40,16 @@ public static class Entrada
 #endif
     }
 
+    public static bool MinijuegoPresionado()
+    {
+#if ENABLE_INPUT_SYSTEM
+        var k = Keyboard.current;
+        return k != null && k.pKey.wasPressedThisFrame;
+#else
+        return Input.GetKeyDown(KeyCode.P);
+#endif
+    }
+
     public static bool EscapePresionado()
     {
 #if ENABLE_INPUT_SYSTEM
