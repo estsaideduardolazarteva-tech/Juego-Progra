@@ -59,9 +59,9 @@ public class Enemigo : MonoBehaviour
             j.Rebotar();
             Destroy(gameObject, 0.6f);
         }
-        else if (Nivel1.Instancia != null)
+        else if (Nivel.Instancia != null)
         {
-            Nivel1.Instancia.RecibirDanio(transform.position.x);
+            Nivel.Instancia.RecibirDanio(transform.position.x);
         }
     }
 }

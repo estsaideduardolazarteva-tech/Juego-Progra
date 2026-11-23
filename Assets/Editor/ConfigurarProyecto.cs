@@ -14,7 +14,7 @@ public static class ConfigurarProyecto
         if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
 
         Directory.CreateDirectory("Assets/Scenes");
-        string[] nombres = { "MenuPrincipal", "Niveles", "Nivel1" };
+        string[] nombres = { "MenuPrincipal", "Niveles", "Nivel1", "Nivel2", "Nivel3" };
         var lista = new List<EditorBuildSettingsScene>();
 
         foreach (string n in nombres)
@@ -28,7 +28,7 @@ public static class ConfigurarProyecto
         EditorBuildSettings.scenes = lista.ToArray();
         EditorSceneManager.OpenScene("Assets/Scenes/MenuPrincipal.unity");
         EditorUtility.DisplayDialog("Listo",
-            "Se crearon las escenas MenuPrincipal, Niveles y Nivel1.\n\nAhora presiona el boton Play (triangulo) con MenuPrincipal abierta.", "OK");
+            "Se crearon las escenas MenuPrincipal, Niveles, Nivel1, Nivel2 y Nivel3.\n\nAhora presiona el boton Play (triangulo) con MenuPrincipal abierta.", "OK");
     }
 }
 #endif

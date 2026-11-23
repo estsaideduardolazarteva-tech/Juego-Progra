@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 // Cuando se carga una escena, mira su NOMBRE y arma el contenido.
-// Asi las escenas pueden estar vacias: MenuPrincipal, Niveles y Nivel1.
+// Asi las escenas pueden estar vacias: MenuPrincipal, Niveles, Nivel1, Nivel2 y Nivel3.
 public static class Arranque
 {
     static Scene ultimaEscena;
@@ -37,7 +37,9 @@ public static class Arranque
         {
             case "MenuPrincipal": new GameObject("MenuPrincipal").AddComponent<MenuPrincipal>(); break;
             case "Niveles": new GameObject("SelectorNiveles").AddComponent<SelectorNiveles>(); break;
-            case "Nivel1": new GameObject("Nivel1").AddComponent<Nivel1>(); break;
+            case "Nivel1": new GameObject("Nivel1").AddComponent<Nivel>().numero = 1; break;
+            case "Nivel2": new GameObject("Nivel2").AddComponent<Nivel>().numero = 2; break;
+            case "Nivel3": new GameObject("Nivel3").AddComponent<Nivel>().numero = 3; break;
         }
     }
 }
