@@ -71,7 +71,7 @@ public class Jugador : MonoBehaviour
     void Mover()
     {
         if (rb == null) return;
-        if (Nivel.Instancia != null && Nivel.Instancia.Pausado) return;
+        if (Time.timeScale == 0f || (Nivel.Instancia != null && Nivel.Instancia.Pausado)) return;
         if (oculto) return;
 
         if (auto) { AutoCaminar(); return; }
