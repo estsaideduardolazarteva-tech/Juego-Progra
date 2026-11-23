@@ -60,7 +60,7 @@ public class Nivel : MonoBehaviour
     void Start()
     {
         sonidoMoneda = Ajustes.CargarSonido("monedas (2)");
-        minijuego = new Minijuego(numero, transform, AgregarMonedas);
+        minijuego = new Minijuego(numero, transform, AgregarMonedas, AgregarVida);
         sonidoVictoria = Ajustes.CargarSonido("ganaste");
         sonidoDerrota = Ajustes.CargarSonido("perdiste");
         Configurar();
@@ -804,6 +804,8 @@ public class Nivel : MonoBehaviour
 
     public void SumarMoneda() { AgregarMonedas(1); }
 
+    void AgregarVida() { vidas++; }
+
     void AgregarMonedas(int cantidad)
     {
         monedas += cantidad;
@@ -972,7 +974,7 @@ public class Nivel : MonoBehaviour
         float icono = h * 0.06f;
 
         // vidas (corazones)
-        for (int i = 0; i < VidasIniciales; i++)
+        for (int i = 0; i < Mathf.Max(VidasIniciales, vidas); i++)
         {
             var r = new Rect(20f + i * icono * 1.2f, 14f, icono, icono * 0.9f);
             GUI.DrawTexture(r, i < vidas ? texCorazon : texCorazonVacio, ScaleMode.ScaleToFit, true);

@@ -24,6 +24,7 @@ public sealed class Minijuego
 
     readonly int nivel;
     readonly Action<int> abonar;
+    readonly Action agregarVida;
     readonly Canvas canvas;
     readonly Text titulo, mensaje;
     readonly Button[] botones = new Button[3];
@@ -36,10 +37,11 @@ public sealed class Minijuego
     public bool Abierto => canvas.gameObject.activeSelf;
     public bool Disponible => intentos < IntentosMaximos;
 
-    public Minijuego(int nivel, Transform padre, Action<int> abonar)
+    public Minijuego(int nivel, Transform padre, Action<int> abonar, Action agregarVida)
     {
         this.nivel = nivel;
         this.abonar = abonar;
+        this.agregarVida = agregarVida;
 
         canvas = UIKit.CrearCanvas(titulos[nivel - 1]);
         canvas.transform.SetParent(padre, false);
@@ -83,7 +85,7 @@ public sealed class Minijuego
         {
             for (int i = 0; i < secuencia.Length; i++)
                 secuencia[i] = UnityEngine.Random.Range(0, puestos.Length);
-            titulo.text = titulos[1];
+            titulo.text = titulos[1] + " · Premio: 1 vida";
             mensaje.text = "Memoriza el orden\n" + string.Join("  →  ", Array.ConvertAll(secuencia, i => puestos[i]));
             MostrarBotones();
             Esperar(Fase.Memorizar, 3.5f);
@@ -155,7 +157,8 @@ public sealed class Minijuego
                 else if (opcion != secuencia[paso]) Terminar("Ese puesto no seguía.");
                 else if (++paso == secuencia.Length)
                 {
-                    DarPremio();
+                    agregarVida();
+                    ganadas = 1;
                     Terminar("¡Orden correcto!");
                 }
                 else mensaje.text = "Repite el orden de los puestos.\nPaso " + (paso + 1) + " de 3";
@@ -195,7 +198,8 @@ public sealed class Minijuego
     void Terminar(string texto)
     {
         fase = Fase.Resultado;
-        mensaje.text = texto + "\nMonedas ganadas: " + ganadas;
+        string premio = nivel == 2 ? "Vidas extra: " : "Monedas ganadas: ";
+        mensaje.text = texto + "\n" + premio + ganadas;
         MostrarBotones();
     }
 
