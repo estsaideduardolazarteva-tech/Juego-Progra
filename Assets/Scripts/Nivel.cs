@@ -54,8 +54,13 @@ public class Nivel : MonoBehaviour
 
     void Awake() { Instancia = this; }
 
+    AudioClip sonidoMoneda, sonidoVictoria, sonidoDerrota;
+
     void Start()
     {
+        sonidoMoneda = Ajustes.CargarSonido("monedas (2)");
+        sonidoVictoria = Ajustes.CargarSonido("ganaste");
+        sonidoDerrota = Ajustes.CargarSonido("perdiste");
         Configurar();
         tiempo = TiempoTotal;
 
@@ -783,7 +788,11 @@ public class Nivel : MonoBehaviour
         jugador.Empujar(dir);
     }
 
-    public void SumarMoneda() { monedas++; }
+    public void SumarMoneda()
+    {
+        monedas++;
+        Ajustes.Sonar(sonidoMoneda);
+    }
 
     void Perder(string texto)
     {
@@ -841,6 +850,8 @@ public class Nivel : MonoBehaviour
 
     void MostrarPerdiste()
     {
+        Ajustes.CambiarMusica(null);
+        Ajustes.Sonar(sonidoDerrota);
         pantallaFin = true;
         GameObject raiz;
         var cont = NuevaPantalla("PantallaPerdiste", "pantalla_perdiste", out raiz);
@@ -850,6 +861,8 @@ public class Nivel : MonoBehaviour
 
     void MostrarVictoria()
     {
+        Ajustes.CambiarMusica(null);
+        Ajustes.Sonar(sonidoVictoria);
         pantallaFin = true;
         GameObject raiz;
         var cont = NuevaPantalla("PantallaVictoria", "pantalla_victoria", out raiz);

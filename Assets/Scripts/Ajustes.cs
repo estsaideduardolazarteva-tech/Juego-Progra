@@ -12,7 +12,7 @@ public static class Ajustes
 
     static float general = 1f, musica = 1f, brillo = 1f;
     static Image velo;          // capa negra que simula el brillo
-    static AudioSource fuenteMusica;  // reproduce Resources/musica (opcional)
+    static AudioSource fuenteMusica, efectos;
 
     public static float General { get { return general; } set { general = value; Aplicar(); } }
     public static float Musica { get { return musica; } set { musica = value; Aplicar(); } }
@@ -56,16 +56,38 @@ public static class Ajustes
         fuenteMusica = go.AddComponent<AudioSource>();
         fuenteMusica.loop = true;
         fuenteMusica.playOnAwake = false;
-        var clip = Resources.Load<AudioClip>("musica");
-        if (clip != null) { fuenteMusica.clip = clip; fuenteMusica.Play(); }
+        efectos = go.AddComponent<AudioSource>();
+        efectos.playOnAwake = false;
 
         Revertir();   // carga lo guardado y lo aplica
+    }
+
+    public static AudioClip CargarSonido(string nombre)
+    {
+        return Resources.Load<AudioClip>("Sounds/" + nombre);
+    }
+
+    public static void CambiarMusica(string nombre)
+    {
+        fuenteMusica.Stop();
+        fuenteMusica.clip = nombre == null ? null : CargarSonido(nombre);
+        if (fuenteMusica.clip != null) fuenteMusica.Play();
+    }
+
+    public static void DetenerEfectos()
+    {
+        efectos.Stop();
+    }
+
+    public static void Sonar(AudioClip clip, float volumen = 1f)
+    {
+        if (clip != null) efectos.PlayOneShot(clip, volumen);
     }
 
     public static void Aplicar()
     {
         AudioListener.volume = general;
-        if (fuenteMusica != null) fuenteMusica.volume = musica;
+        if (fuenteMusica != null) fuenteMusica.volume = musica * 0.4f;
         if (velo != null) velo.color = new Color(0f, 0f, 0f, 1f - brillo);
     }
 }

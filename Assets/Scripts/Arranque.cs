@@ -33,13 +33,22 @@ public static class Arranque
         hayUltima = true;
         Time.timeScale = 1f;
 
+        Ajustes.DetenerEfectos();
+        string musica = null;
         switch (escena.name)
         {
-            case "MenuPrincipal": new GameObject("MenuPrincipal").AddComponent<MenuPrincipal>(); break;
+            case "MenuPrincipal":
+                musica = "fondo-menu";
+                new GameObject("MenuPrincipal").AddComponent<MenuPrincipal>();
+                break;
             case "Niveles": new GameObject("SelectorNiveles").AddComponent<SelectorNiveles>(); break;
             case "Nivel1": new GameObject("Nivel1").AddComponent<Nivel>().numero = 1; break;
             case "Nivel2": new GameObject("Nivel2").AddComponent<Nivel>().numero = 2; break;
             case "Nivel3": new GameObject("Nivel3").AddComponent<Nivel>().numero = 3; break;
         }
+
+        if (escena.name == "Nivel1" || escena.name == "Nivel2" || escena.name == "Nivel3")
+            musica = "fondo-nivel1";
+        Ajustes.CambiarMusica(musica);
     }
 }
