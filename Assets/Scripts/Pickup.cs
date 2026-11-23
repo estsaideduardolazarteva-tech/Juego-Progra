@@ -24,24 +24,19 @@ public class Pickup : MonoBehaviour
 
     void OnTriggerEnter2D(Collider2D otro)
     {
-        if (otro.GetComponent<Jugador>() == null || Nivel1.Instancia == null) return;
+        if (otro.GetComponent<Jugador>() == null || Nivel.Instancia == null) return;
 
         switch (tipo)
         {
             case TipoPickup.Moneda:
-                Nivel1.Instancia.SumarMoneda();
-
-                // 🔊 Reproducir sonido de moneda desde la Jerarquía
-                GameObject objMoneda = GameObject.Find("monedas (2)");
-                if (objMoneda != null) objMoneda.GetComponent<AudioSource>()?.Play();
-
+                Nivel.Instancia.SumarMoneda();
                 Destroy(gameObject);
                 break;
             case TipoPickup.Peligro:
-                Nivel1.Instancia.RecibirDanio(transform.position.x);
+                Nivel.Instancia.RecibirDanio(transform.position.x);
                 break;
             case TipoPickup.Meta:
-                Nivel1.Instancia.LlegarAMeta();
+                Nivel.Instancia.LlegarAMeta();
                 break;
         }
     }
